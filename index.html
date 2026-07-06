@@ -1070,14 +1070,44 @@ function removeFile(name) {
 }
 
 // ====== CLAUDE API ======
+function getApiKey() {
+  let key = localStorage.getItem('qi_api_key');
+  if (!key) {
+    key = prompt('🔑 Enter your Anthropic API key to activate AI features:
+(It will be saved locally on this device only)');
+    if (key && key.trim().startsWith('sk-ant-')) {
+      localStorage.setItem('qi_api_key', key.trim());
+    } else if (key) {
+      alert('Invalid key format. Please enter a key starting with sk-ant-');
+      return null;
+    } else {
+      return null;
+    }
+  }
+  return key;
+}
+
 async function claude(messages, system) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('No API key set. Refresh and enter your Anthropic API key.');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, system, messages })
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:8192, system, messages })
   });
   const d = await res.json();
-  if (!res.ok) throw new Error(d.error?.message||'API error');
+  if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('qi_api_key');
+      throw new Error('Invalid API key — cleared. Refresh to re-enter.');
+    }
+    throw new Error(d.error?.message||'API error');
+  }
   return d.content.map(b=>b.text||'').join('');
 }
 
@@ -1335,6 +1365,13 @@ document.getElementById('ios-close').addEventListener('click', () => {
 
 const hash = location.hash.replace('#','');
 if (['upload','guide','mindmap','chat','quiz','aplus'].includes(hash)) switchTab(hash);
+
+function resetApiKey() {
+  if (confirm('Clear saved API key? You will be prompted to enter it again next time you use an AI feature.')) {
+    localStorage.removeItem('qi_api_key');
+    alert('API key cleared. Refresh the page to re-enter.');
+  }
+}
 </script>
 
 </body>
