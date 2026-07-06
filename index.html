@@ -1098,7 +1098,7 @@ async function claude(messages, system) {
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, system, messages })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 3000, system, messages })
     });
   } catch(fetchErr) {
     clearTimeout(timeout);
@@ -1127,7 +1127,7 @@ async function generateGuide() {
   const sys=`You are an A&P tutor for doctoral acupuncture students at VUIM, WM360 Summer 2026.
 Use HTML: <h2> sections, <h3> subsections, <ul><li> lists, <strong> key terms, <table> for comparisons.
 Be concise but complete: key structures, physiology, homeostatic imbalances, one TCM parallel per section.
-Aim for a focused 600-900 word guide — clear, scannable, exam-ready.`;
+Aim for a focused 800-1200 word guide — clear, scannable, exam-ready.`;
   let msg = topic
     ? `Generate a comprehensive doctoral study guide for: "${topic.label}" (${topic.ch}) for WM360 at VUIM.${hasSlides?'\nAlso incorporate:\n'+uploadedContent.substring(0,1500):''}\nInclude a comparison table of key structures/functions where appropriate. Add a TCM connection section at the end.`
     : `Generate a comprehensive study guide from these uploaded WM360 lecture slides:\n${uploadedContent.substring(0,2000)}\nOrganize clearly with headings, tables, homeostatic imbalances, and a TCM connection section.`;
