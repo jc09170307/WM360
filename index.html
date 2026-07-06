@@ -1082,26 +1082,37 @@ function getApiKey() {
 
 async function claude(messages, system) {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error('No API key set. Refresh and enter your Anthropic API key.');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:8192, system, messages })
-  });
+  if (!apiKey) throw new Error('No API key set.');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 8192, system, messages })
+    });
+  } catch(fetchErr) {
+    clearTimeout(timeout);
+    if (fetchErr.name === 'AbortError') throw new Error('Request timed out after 60s. Check your connection.');
+    throw new Error('Network error: ' + fetchErr.message + '. This may be a CORS issue — try opening the app in Chrome.');
+  }
+  clearTimeout(timeout);
+
   const d = await res.json();
   if (!res.ok) {
-    if (res.status === 401) {
-      localStorage.removeItem('qi_api_key');
-      throw new Error('Invalid API key — cleared. Refresh to re-enter.');
-    }
-    throw new Error(d.error?.message||'API error');
+    if (res.status === 401) { localStorage.removeItem('qi_api_key'); throw new Error('Invalid API key — cleared.'); }
+    throw new Error(d.error?.message || 'API error ' + res.status);
   }
-  return d.content.map(b=>b.text||'').join('');
+  return d.content.map(b => b.text || '').join('');
 }
 
 // ====== STUDY GUIDE ======
